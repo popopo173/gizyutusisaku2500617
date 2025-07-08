@@ -14,6 +14,9 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [imageUnderLabel, setImageUnderLabel] = useState<string[]>(["Aパターン", "Bパターン", "Cパターン"]);
 
+  const [previewEnabled, setPreviewEnabled] = useState(false);
+  const [exportEnabled, setExportEnabled] = useState(false);
+
   const detectPatternRef = (text: string): "A" | "B" | "C" | null => {
     const lower = text.toLowerCase();
     const hasA = lower.includes("aパターン");
@@ -30,6 +33,23 @@ function App() {
     return null;
   };
 
+  const translateToEnglish = async (text: string): Promise<string> => {
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4.1-mini",
+        messages: [
+          { role: "system", content: "Translate the following Japanese text into English. Only return the translated English text." },
+          { role: "user", content: text }
+        ]
+      });
+      return response.choices[0].message.content?.trim() || text;
+    } catch (err) {
+      console.error("Translation error:", err);
+      alert("翻訳に失敗しました。");
+      return text;
+    }
+  };
+
   const generateImages = async (prompt: string, n: number = 3) => {
     setLoading(true);
     try {
@@ -42,11 +62,7 @@ function App() {
       return response?.data?.map((img) => img.url || "") ?? [];
     } catch (err: any) {
       console.error(err);
-      if (err.name === "RateLimitError") {
-        alert("リクエストが多すぎます。少し時間を空けて再度お試しください。");
-      } else {
-        alert("画像生成に失敗しました");
-      }
+      alert("画像生成に失敗しました");
       return [];
     } finally {
       setLoading(false);
@@ -54,43 +70,51 @@ function App() {
   };
 
   const handleSubmit = async () => {
+    setExportEnabled(false);
+    setPreviewEnabled(false);
+
     const pattern = detectPatternRef(inputText);
     let basePrompt = "";
+
+    const translated = await translateToEnglish(inputText);
 
     if (pattern && lastPrompts.length === 3) {
       const idx = { A: 0, B: 1, C: 2 }[pattern];
       const originalPrompt = lastPrompts[idx];
-      basePrompt = `${originalPrompt} Additionally, the user requested: "${inputText}"`;
+      basePrompt = `${originalPrompt} Additionally, incorporate the following user request: "${translated}"`;
     } else {
-      basePrompt = `Create a background image . Design idea: "${inputText}".`;
+      basePrompt = `Create a PowerPoint background image based on the following design idea: "${translated}". The design should be clean, visually pleasing, and suitable for use behind text.`;
     }
 
     const urls = await generateImages(basePrompt);
     setImages(urls);
     setLastPrompts([basePrompt, basePrompt, basePrompt]);
     setImageUnderLabel(["Aパターン", "Bパターン", "Cパターン"]);
+
+    if (urls.length === 3) setPreviewEnabled(true);
   };
 
   const handlePreview = async (idx: number) => {
+    setPreviewEnabled(false);
+    setExportEnabled(false);
+
     if (!images[idx]) {
       alert("先に画像を生成してください");
       return;
     }
 
-    const basePrompt = lastPrompts[idx] || `Generate a background image based on this example.`;
+    const basePrompt = lastPrompts[idx] || "Create a PowerPoint slide background image.";
 
-    const previewPrompt = `${basePrompt} Please generate two background images for a PowerPoint presentation: one for a content slide and one for a section divider. The images should match the theme of the original, be subtle, and use a 16:9 aspect ratio.`;
+    const previewPrompt1 = `${basePrompt} Generate a clean, minimalistic background image for a content slide. Avoid identifiable subjects or text. Use abstract shapes or soft gradients.`;
+    const previewPrompt2 = `${basePrompt} Generate a subtle and abstract background for a section divider slide. It should use soft colors and no focal subjects or objects.`;
 
-    const previewImages = await generateImages(previewPrompt, 2);
+    const [contentImage] = await generateImages(previewPrompt1, 1);
+    const [dividerImage] = await generateImages(previewPrompt2, 1);
 
-    if (previewImages.length === 2) {
-      const newImages = [
-        images[idx],          // タイトルスライド
-        previewImages[0],     // 本文スライド
-        previewImages[1],     // 章区切りスライド
-      ];
-      setImages(newImages);
+    if (contentImage && dividerImage) {
+      setImages([images[idx], contentImage, dividerImage]);
       setImageUnderLabel(["タイトルスライド", "本文スライド", "章区切りスライド"]);
+      setExportEnabled(true);
     } else {
       alert("プレビュー画像の生成に失敗しました");
     }
@@ -102,63 +126,66 @@ function App() {
     }
   };
 
+  const handleExport = async () => {
+  try {
+    const response = await fetch("http://localhost:5000/export", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ images }),
+    });
+
+    if (!response.ok) {
+      alert("エクスポートに失敗しました");
+      return;
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "slides.pptx";
+    a.click();
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error("Export error:", err);
+    alert("エクスポートに失敗しました");
+  }
+};
+
+
   return (
     <div className="min-h-screen bg-gray-100 relative flex flex-col">
-      {/* タイトル */}
-      <h1 className="absolute top-4 left-6 text-xl font-bold">PowerPoint背景画像ジェネレーター</h1>
+      <h1 className="absolute top-4 left-6 text-xl font-bold">パワポデザインレコメンダー</h1>
 
-      {/* ローディング表示 */}
       {loading && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 flex items-center gap-2 text-gray-600">
           <svg className="animate-spin h-5 w-5 text-gray-600" viewBox="0 0 24 24">
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-              fill="none"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-            />
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
           </svg>
           <span>画像を生成中...</span>
         </div>
       )}
 
-      {/* メイン画像エリア */}
       <div className="flex-grow flex items-center justify-center px-6 pt-24 pb-32">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl">
           {[0, 1, 2].map((idx) => (
-            <div
-              key={idx}
-              className="flex flex-col items-center border border-gray-300 rounded-md relative bg-white p-2"
-            >
-              {/* プレビューボタン */}
+            <div key={idx} className="flex flex-col items-center border border-gray-300 rounded-md relative bg-white p-2">
               <button
-                className="absolute top-2 right-2 bg-white border border-gray-400 px-3 py-1 text-sm rounded hover:bg-gray-100"
+                className="absolute top-2 right-2 bg-white border border-gray-400 px-3 py-1 text-sm rounded hover:bg-gray-100 disabled:opacity-50"
                 onClick={() => handlePreview(idx)}
-                disabled={loading}
+                disabled={!previewEnabled || loading}
               >
                 プレビュー
               </button>
 
-              {/* 画像 or プレースホルダー */}
               {images[idx] ? (
-                <img
-                  src={images[idx]}
-                  alt={`Pattern ${String.fromCharCode(65 + idx)}`}
-                  className="w-full aspect-[16/9] object-cover"
-                />
+                <img src={images[idx]} alt={`Pattern ${String.fromCharCode(65 + idx)}`} className="w-full aspect-[16/9] object-cover" />
               ) : (
                 <div className="w-full aspect-[16/9] border-2 border-dashed border-gray-300 bg-white" />
               )}
 
-              {/* ラベル（フェードイン付き） */}
               <div
                 className={clsx(
                   "mt-2 mb-4 font-medium transition-opacity duration-500 ease-in-out",
@@ -172,17 +199,20 @@ function App() {
         </div>
       </div>
 
-      {/* 入力欄 & エクスポート（画面下固定） */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-300 px-6 py-4 flex items-center justify-center gap-4 shadow-md">
         <input
           type="text"
           className="flex-1 max-w-2xl p-3 border border-gray-300 rounded"
-          placeholder="例: ハワイ風の明るい雰囲気 または Bパターンを明るく　Enterキーで生成開始！"
+          placeholder="例: ハワイ風の明るい雰囲気 または Bパターンを明るく（Enterで生成）"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyPress}
         />
-        <button className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+        <button
+          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:bg-gray-400"
+          onClick={handleExport}
+          disabled={!exportEnabled || loading}
+        >
           エクスポート
         </button>
       </div>
