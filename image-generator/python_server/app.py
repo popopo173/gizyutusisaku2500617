@@ -11,6 +11,15 @@ CORS(app)
 
 @app.route("/export", methods=["POST"])
 def export_pptx():
+    """
+    フロントエンドから送られてきた画像URL3つを背景画像として、
+    PowerPointファイルを生成し、ダウンロード用に送信する。
+    スライド構成:
+        - スライド1: タイトルスライド（中央にタイトル）
+        - スライド2: 本文スライド（タイトルと本文を左寄せ表示）
+        - スライド3: 章区切りスライド（セクションタイトルとサブタイトル）
+    """
+    
     data = request.json
     images = data.get("images", [])
 
@@ -47,7 +56,10 @@ def export_pptx():
     return send_file(output, as_attachment=True, download_name="slides.pptx", mimetype="application/vnd.openxmlformats-officedocument.presentationml.presentation")
 
 def set_background(prs, slide, image_url):
-    """背景画像を16:9にトリミングして設定"""
+    """
+    スライドの背景として画像を挿入する。
+    背景画像を16:9にトリミングして設定
+    """
     response = requests.get(image_url)
     original_img = Image.open(BytesIO(response.content))
 
@@ -82,7 +94,9 @@ def set_background(prs, slide, image_url):
     )
 
 def add_textbox(slide, text, left, top, width, height, font_size=24):
-    """テキストボックスを追加"""
+    """
+    指定された位置とサイズにテキストボックスを配置し、文字列を表示する。
+    """
     textbox = slide.shapes.add_textbox(left, top, width, height)
     text_frame = textbox.text_frame
     text_frame.clear()

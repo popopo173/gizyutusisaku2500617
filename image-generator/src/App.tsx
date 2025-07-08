@@ -12,11 +12,14 @@ function App() {
   const [images, setImages] = useState<string[]>([]);
   const [lastPrompts, setLastPrompts] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [imageUnderLabel, setImageUnderLabel] = useState<string[]>(["Aパターン", "Bパターン", "Cパターン"]);
 
   const [previewEnabled, setPreviewEnabled] = useState(false);
   const [exportEnabled, setExportEnabled] = useState(false);
+  
 
+  // A/B/Cパターンのいずれかを検出（複数指定はエラー）
   const detectPatternRef = (text: string): "A" | "B" | "C" | null => {
     const lower = text.toLowerCase();
     const hasA = lower.includes("aパターン");
@@ -33,6 +36,7 @@ function App() {
     return null;
   };
 
+  // 日本語入力を英語に翻訳
   const translateToEnglish = async (text: string): Promise<string> => {
     try {
       const response = await openai.chat.completions.create({
@@ -50,6 +54,7 @@ function App() {
     }
   };
 
+  // 画像生成APIを実行
   const generateImages = async (prompt: string, n: number = 3) => {
     setLoading(true);
     try {
@@ -69,48 +74,65 @@ function App() {
     }
   };
 
-  const handleSubmit = async () => {
-    setExportEnabled(false);
-    setPreviewEnabled(false);
+  // ユーザー入力を翻訳・プロンプトに変換し、画像を生成する処理
+const handleSubmit = async () => {
+  // ボタンの無効化（エクスポート・プレビュー）
+  setExportEnabled(false);
+  setPreviewEnabled(false);
 
-    const pattern = detectPatternRef(inputText);
-    let basePrompt = "";
+  // A/B/Cパターンのいずれかを検出（複数指定はエラー）
+  const pattern = detectPatternRef(inputText);
+  let basePrompt = "";
 
-    const translated = await translateToEnglish(inputText);
+  // 日本語入力を英語に翻訳
+  const translated = await translateToEnglish(inputText);
 
-    if (pattern && lastPrompts.length === 3) {
-      const idx = { A: 0, B: 1, C: 2 }[pattern];
-      const originalPrompt = lastPrompts[idx];
-      basePrompt = `${originalPrompt} Additionally, incorporate the following user request: "${translated}"`;
-    } else {
-      basePrompt = `Create a PowerPoint background image based on the following design idea: "${translated}". The design should be clean, visually pleasing, and suitable for use behind text.`;
-    }
+  // A/B/Cパターン指定があり、以前のプロンプトがある場合はそれに加筆する
+  if (pattern && lastPrompts.length === 3) {
+    const idx = { A: 0, B: 1, C: 2 }[pattern];
+    const originalPrompt = lastPrompts[idx];
+    basePrompt = `${originalPrompt} Additionally, incorporate the following user request: "${translated}"`;
+  } else {
+    // 新規プロンプトを生成
+    basePrompt = `Create a PowerPoint background image based on the following design idea: "${translated}". The design should be clean, visually pleasing, and suitable for use behind text.`;
+  }
 
-    const urls = await generateImages(basePrompt);
-    setImages(urls);
-    setLastPrompts([basePrompt, basePrompt, basePrompt]);
-    setImageUnderLabel(["Aパターン", "Bパターン", "Cパターン"]);
+  // 画像生成APIを実行（3枚）
+  const urls = await generateImages(basePrompt);
 
-    if (urls.length === 3) setPreviewEnabled(true);
-  };
+  // 状態更新
+  setImages(urls);
+  setLastPrompts([basePrompt, basePrompt, basePrompt]);
+  setImageUnderLabel(["Aパターン", "Bパターン", "Cパターン"]);
 
+  // 3枚の画像が生成された場合にプレビューボタンを有効にする
+  if (urls.length === 3) setPreviewEnabled(true);
+};
+
+  // 選択されたパターンに対してプレビュー画像（本文スライド、章区切り）を生成する処理
   const handlePreview = async (idx: number) => {
+    // プレビューボタンとエクスポートボタンを一時的に無効化
     setPreviewEnabled(false);
     setExportEnabled(false);
 
+    // 選択された画像が存在しない場合は中断
     if (!images[idx]) {
       alert("先に画像を生成してください");
       return;
     }
 
+    // 元プロンプトを取得（なければ汎用プロンプト）
     const basePrompt = lastPrompts[idx] || "Create a PowerPoint slide background image.";
 
+    // 内容スライド用・章区切り用の詳細プロンプトを追加生成
     const previewPrompt1 = `${basePrompt} Generate a clean, minimalistic background image for a content slide. Avoid identifiable subjects or text. Use abstract shapes or soft gradients.`;
     const previewPrompt2 = `${basePrompt} Generate a subtle and abstract background for a section divider slide. It should use soft colors and no focal subjects or objects.`;
 
+    // それぞれ1枚ずつ画像生成
     const [contentImage] = await generateImages(previewPrompt1, 1);
     const [dividerImage] = await generateImages(previewPrompt2, 1);
 
+    // 正常に2枚生成できた場合、画像とラベルを更新し、エクスポートを有効に
     if (contentImage && dividerImage) {
       setImages([images[idx], contentImage, dividerImage]);
       setImageUnderLabel(["タイトルスライド", "本文スライド", "章区切りスライド"]);
@@ -120,38 +142,43 @@ function App() {
     }
   };
 
+  //入力欄にテキスト入力後Enterキー押下でhandleSubmitを起動するように受付を行う
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && inputText.trim() && !loading) {
       handleSubmit();
     }
   };
 
+  //パワーポイントファイルを生成します
   const handleExport = async () => {
-  try {
-    const response = await fetch("http://localhost:5000/export", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ images }),
-    });
+    setExporting(true); 
+    try {
+      const response = await fetch("http://localhost:5000/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images }),
+      });
 
-    if (!response.ok) {
+      if (!response.ok) {
+        alert("エクスポートに失敗しました");
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "slides.pptx";
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Export error:", err);
       alert("エクスポートに失敗しました");
-      return;
+    } finally {
+      setExporting(false);
     }
-
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "slides.pptx";
-    a.click();
-    window.URL.revokeObjectURL(url);
-  } catch (err) {
-    console.error("Export error:", err);
-    alert("エクスポートに失敗しました");
-  }
-};
+  };
 
 
   return (
@@ -165,6 +192,16 @@ function App() {
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
           </svg>
           <span>画像を生成中...</span>
+        </div>
+      )}
+
+      {exporting && (
+        <div className="absolute top-32 left-1/2 -translate-x-1/2 flex items-center gap-2 text-gray-600">
+          <svg className="animate-spin h-5 w-5 text-gray-600" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+          </svg>
+          <span>ファイルを生成中...</span>
         </div>
       )}
 
@@ -211,7 +248,7 @@ function App() {
         <button
           className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:bg-gray-400"
           onClick={handleExport}
-          disabled={!exportEnabled || loading}
+          disabled={!exportEnabled || loading || exporting}
         >
           エクスポート
         </button>
