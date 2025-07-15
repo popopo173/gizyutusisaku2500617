@@ -35,19 +35,19 @@ def export_pptx():
     slide_layout = prs.slide_layouts[6]  # Blank
     slide1 = prs.slides.add_slide(slide_layout)
     set_background(prs, slide1, images[0])
-    add_textbox(slide1, "サンプルタイトル", Inches(1), Inches(2), Inches(8), Inches(1.5), font_size=40)
+    add_textbox(slide1, "サンプルタイトル", Inches(3), Inches(2), Inches(5), Inches(0.7), font_size=40)
 
     # --- スライド2: 本文スライド（タイトル＋本文） ---
     slide2 = prs.slides.add_slide(prs.slide_layouts[6])  # Blankに変更
     set_background(prs, slide2, images[1])
-    add_textbox(slide2, "本文スライドのタイトル", Inches(-1.5), Inches(0), Inches(8), Inches(1), font_size=28)
-    add_textbox(slide2, "ここに本文内容を入力", Inches(-2), Inches(1), Inches(8), Inches(4), font_size=20)
+    add_textbox(slide2, "本文スライドのタイトル", Inches(0.5), Inches(0), Inches(8), Inches(1), font_size=28)
+    add_textbox(slide2, "ここに本文内容を入力", Inches(1), Inches(1), Inches(8), Inches(4), font_size=20)
 
     # --- スライド3: 章区切りスライド（セクションタイトル＋サブタイトル） ---
     slide3 = prs.slides.add_slide(prs.slide_layouts[6])  # Blankに変更
     set_background(prs, slide3, images[2])
-    add_textbox(slide3, "章区切りスライド", Inches(1), Inches(1.5), Inches(8), Inches(1), font_size=32)
-    add_textbox(slide3, "セクションの紹介文", Inches(1), Inches(3), Inches(8), Inches(1), font_size=24)
+    add_textbox(slide3, "章区切りスライド", Inches(3), Inches(1.5), Inches(5), Inches(0.7), font_size=32)
+    add_textbox(slide3, "セクションの紹介文", Inches(3), Inches(3), Inches(5), Inches(0.7), font_size=24)
 
     # --- 書き出し ---
     output = BytesIO()

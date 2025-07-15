@@ -1,0 +1,23 @@
+/*
+役割：共通ロジックのヘルパー化
+detectPatternRef(text)：A/B/C パターンの検出ロジック
+複数指定の排他制御あり（アラート付き）
+将来的に他の文字列処理系関数が増えた場合に追加する場所
+*/
+
+// A/B/Cパターンのいずれかを検出（複数指定はエラー）
+export const detectPatternRef = (text: string): "A" | "B" | "C" | null => {
+  const lower = text.toLowerCase();
+  const hasA = lower.includes("aパターン");
+  const hasB = lower.includes("bパターン");
+  const hasC = lower.includes("cパターン");
+  const count = [hasA, hasB, hasC].filter(Boolean).length;
+  if (count > 1) {
+    alert("A/B/Cパターンは1つだけ指定してください");
+    return null;
+  }
+  if (hasA) return "A";
+  if (hasB) return "B";
+  if (hasC) return "C";
+  return null;
+};
