@@ -1,5 +1,4 @@
 /*
-api.ts
 役割：OpenAI API とファイル生成APIの通信処理
 translateToEnglish(text)：OpenAIで翻訳
 generateImages(prompt, n)：画像生成API呼び出し
@@ -14,7 +13,7 @@ const openai = new OpenAI({
 });
 
 // 日本語入力を英語に翻訳
-export const translateToEnglish = async (text: string): Promise<string> => {
+export const translateToEnglish = async (text: string): Promise<___(1)___> => {
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
@@ -62,20 +61,20 @@ export const generateImages = async (
 //スライド生成
 export const exportSlides = async (images: string[]): Promise<void> => {
   try {
-    const response = await fetch("http://localhost:5000/export", {
+    const response = await fetch("http://localhost:5000/___(2)___", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ images }),
+      body: JSON.stringify({ ___(3)___ }),
     });
 
-    if (!response.ok) throw new Error("export failed");
+    if (!response.ok) throw new Error("___(4)___");
 
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = "slides.pptx";
-    a.click();
+    a.___(5)___()
     window.URL.revokeObjectURL(url);
   } catch (err) {
     console.error("Export error:", err);

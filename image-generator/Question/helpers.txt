@@ -1,5 +1,4 @@
 /*
-helper.ts
 役割：共通ロジックのヘルパー化
 detectPatternRef(text)：A/B/C パターンの検出ロジック
 複数指定の排他制御あり（アラート付き）
@@ -7,7 +6,7 @@ detectPatternRef(text)：A/B/C パターンの検出ロジック
 */
 
 // A/B/Cパターンのいずれかを検出（複数指定はエラー）
-export const detectPatternRef = (text: string): "A" | "B" | "C" | null => {
+export const detectPatternRef = (text: string): "A" | "B" | "C" | ___(1)___ => {
   const lower = text.toLowerCase();
   const hasA = lower.includes("aパターン");
   const hasB = lower.includes("bパターン");

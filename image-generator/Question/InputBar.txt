@@ -1,5 +1,4 @@
 /*
-InputBar.tsx
 役割：入力欄＋エクスポートボタン
 入力ボックス（Enter対応あり）
 エクスポートボタン
@@ -24,12 +23,12 @@ const InputBar = ({ inputText, setInputText, onKeyPress, onExport, exportEnabled
       placeholder="例: ハワイ風の明るい雰囲気 または Bパターンを明るく（Enterで生成）"
       value={inputText}
       onChange={(e) => setInputText(e.target.value)}
-      onKeyDown={onKeyPress}
+      ___(1)___={onKeyPress}
     />
     <button
       className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:bg-gray-400"
       onClick={onExport}
-      disabled={!exportEnabled || loading}
+      disabled={!exportEnabled || ___(2)___}
     >
       エクスポート
     </button>

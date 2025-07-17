@@ -1,5 +1,4 @@
 /*
-ImageGrid.tsx
 役割：画像表示エリア＋プレビューボタン
 各パターン（A, B, C）の画像をグリッド表示
 プレビューボタンを画像ごとに配置
@@ -24,7 +23,7 @@ const ImageGrid = ({ images, labels, onPreview, loading, previewEnabled }: Props
             <button
               className="absolute top-2 right-2 bg-white border border-gray-400 px-3 py-1 text-sm rounded hover:bg-gray-100 disabled:opacity-50"
               onClick={() => onPreview(idx)}
-              disabled={!previewEnabled || loading}
+              disabled={___(1)___}
             >
               プレビュー
             </button>
