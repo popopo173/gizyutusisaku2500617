@@ -5,9 +5,10 @@ translateToEnglish(text)：OpenAIで翻訳
 generateImages(prompt, n)：画像生成API呼び出し
 exportSlides(images)：Flaskサーバー経由でPPTXエクスポート
 */
+
 import OpenAI from "openai";
 
-//APIkey管理
+// APIキー管理
 const openai = new OpenAI({
   apiKey: process.env.REACT_APP_OPENAI_API_KEY,
   dangerouslyAllowBrowser: true,
@@ -59,7 +60,7 @@ export const generateImages = async (
   }
 };
 
-//スライド生成
+// スライド生成
 export const exportSlides = async (images: string[]): Promise<void> => {
   try {
     const response = await fetch("http://localhost:5000/export", {
@@ -80,5 +81,26 @@ export const exportSlides = async (images: string[]): Promise<void> => {
   } catch (err) {
     console.error("Export error:", err);
     alert("エクスポートに失敗しました");
+  }
+};
+
+//Tips生成API（プロンプトに基づく短文アドバイス）
+export const generateTips = async (prompt: string): Promise<string> => {
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.7,
+    });
+
+    return response.choices[0].message.content?.trim() || "";
+  } catch (err) {
+    console.error("Tips生成エラー:", err);
+    return "Tipsの生成に失敗しました";
   }
 };

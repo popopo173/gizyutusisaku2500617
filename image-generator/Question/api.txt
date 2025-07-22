@@ -1,22 +1,24 @@
 /*
+api.ts
 役割：OpenAI API とファイル生成APIの通信処理
 translateToEnglish(text)：OpenAIで翻訳
 generateImages(prompt, n)：画像生成API呼び出し
 exportSlides(images)：Flaskサーバー経由でPPTXエクスポート
 */
+
 import OpenAI from "openai";
 
-//APIkey管理
+// APIキー管理
 const openai = new OpenAI({
-  apiKey: process.env.REACT_APP_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true,
+  apiKey: process.env.__(1)__,
+  dangerouslyAllowBrowser: __(2)__,
 });
 
 // 日本語入力を英語に翻訳
-export const translateToEnglish = async (text: string): Promise<___(1)___> => {
+export const translateToEnglish = async (text: string): Promise<string> => {
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
+      model: "__(3)__",
       messages: [
         {
           role: "system",
@@ -26,7 +28,7 @@ export const translateToEnglish = async (text: string): Promise<___(1)___> => {
         { role: "user", content: text },
       ],
     });
-    return response.choices[0].message.content?.trim() || text;
+    return response.choices[0].message.__(4)__?.trim() || text;
   } catch (err) {
     console.error("Translation error:", err);
     alert("翻訳に失敗しました。");
@@ -40,44 +42,65 @@ export const generateImages = async (
   n: number,
   setLoading: (v: boolean) => void
 ): Promise<string[]> => {
-  setLoading(true);
+  setLoading(__(5)__);
   try {
-    const response = await openai.images.generate({
+    const response = await openai.__(6)__.generate({
       prompt,
       n,
-      size: "512x512",
-      response_format: "url",
+      size: "__(7)__",
+      response_format: "__(8)__",
     });
-    return response?.data?.map((img) => img.url || "") ?? [];
+    return response?.data?.map((img) => img.__(9)__ || "") ?? [];
   } catch (err) {
     console.error(err);
     alert("画像生成に失敗しました");
     return [];
   } finally {
-    setLoading(false);
+    setLoading(__(10)__);
   }
 };
 
-//スライド生成
+// スライド生成
 export const exportSlides = async (images: string[]): Promise<void> => {
   try {
-    const response = await fetch("http://localhost:5000/___(2)___", {
+    const response = await fetch("__(11)__", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ___(3)___ }),
+      body: JSON.stringify({ __(12)__ }),
     });
 
-    if (!response.ok) throw new Error("___(4)___");
+    if (!response.ok) throw new Error("__(13)__");
 
     const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
+    const url = window.URL.__(14)__(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "slides.pptx";
-    a.___(5)___()
-    window.URL.revokeObjectURL(url);
+    a.download = "__(15)__";
+    a.click();
+    window.URL.__(16)__(url);
   } catch (err) {
     console.error("Export error:", err);
     alert("エクスポートに失敗しました");
+  }
+};
+
+// Tips生成API（プロンプトに基づく短文アドバイス）
+export const generateTips = async (prompt: string): Promise<string> => {
+  try {
+    const response = await openai.chat.completions.create({
+      model: "__(17)__",
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: __(18)__,
+    });
+
+    return response.choices[0].message.content?.__(19)__"() || "";
+  } catch (err) {
+    console.error("Tips生成エラー:", err);
+    return "__(20)__";
   }
 };
